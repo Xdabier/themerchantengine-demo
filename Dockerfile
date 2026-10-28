@@ -8,7 +8,7 @@ RUN apt-get update \
   && rm -rf /var/lib/apt/lists/*
 
 ARG ENGINE_REPO=https://github.com/Xdabier/themerchantengine
-ARG ENGINE_REF=master
+ARG ENGINE_REF=main
 
 ENV PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1 \
     PUPPETEER_SKIP_DOWNLOAD=1 \
