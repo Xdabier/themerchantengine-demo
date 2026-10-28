@@ -21,6 +21,10 @@ ENV PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1 \
 WORKDIR /app
 RUN git clone --depth 1 --branch "$ENGINE_REF" "$ENGINE_REPO" . && rm -rf .git
 
+# Neon object storage answers 501 to object ACLs. The demo bucket is public, so drop them.
+ARG ACL_FILES="apps/api/src/modules/assets/storage/s3-storage.driver.ts prisma/seeds/fixture-catalogue/lib/storage.ts"
+RUN sed -i "/ACL: 'public-read',/d" $ACL_FILES && ! grep -n "ACL: 'public-read'," $ACL_FILES
+
 RUN npm ci --include=dev
 RUN npx prisma generate
 RUN NODE_OPTIONS=--max-old-space-size=4096 npx nx build api \
