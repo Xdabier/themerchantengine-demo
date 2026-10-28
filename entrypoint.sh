@@ -6,7 +6,9 @@ cd /app
 : "${DATABASE_URL:?Set DATABASE_URL as a Render secret (Neon direct URL, pooling off)}"
 
 API_URL="${DEMO_API_URL:-${RENDER_EXTERNAL_URL:-https://themerchantengine-demo-api.onrender.com}}"
-STORE_CONFIG="test/fixtures/store-configs/demo.config.json"
+STORE_CONFIG=/tmp/demo-store.config.json
+# The scenario fixture wraps the store config in a "fixture" key the strict schema rejects.
+node -e "const c=require('/app/test/fixtures/store-configs/demo.config.json');delete c.fixture;require('fs').writeFileSync(process.argv[1],JSON.stringify(c))" "$STORE_CONFIG"
 
 rand() { node -e "process.stdout.write(require('crypto').randomBytes(48).toString('base64url'))"; }
 
