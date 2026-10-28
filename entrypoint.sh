@@ -44,19 +44,22 @@ redis-server --daemonize yes --bind 127.0.0.1 --port 6379 --save "" --appendonly
 reseed() (
   # Lowest CPU priority, so the placeholder answers the Render health check in time.
   renice -n 19 -p $BASHPID >/dev/null
+  # 512 MB RAM: one node process at a time (no npx chains), a capped heap, and a lean sharp.
+  export NODE_OPTIONS=--max-old-space-size=256 MALLOC_ARENA_MAX=2 VIPS_CONCURRENCY=1 UV_THREADPOOL_SIZE=1
+  ts() { node -r ts-node/register/transpile-only "$@"; }
   echo "[demo] reseed start $(date -u +%FT%TZ)"
   rm -rf uploads/* uploads-private/*
   redis-cli -p 6379 FLUSHALL >/dev/null
-  npx prisma db push --force-reset --accept-data-loss &&
-  npx ts-node --transpile-only prisma/apply-fts-setup.ts &&
-  npx ts-node --transpile-only prisma/apply-notification-indexes.ts &&
-  npx ts-node --transpile-only prisma/apply-shipping-indexes.ts &&
-  SEED_SCOPE=notifications-rbac STORE_CONFIG_FILE="$STORE_CONFIG" SEED_SHIPPING_FLAT_RATE=5 npx prisma db seed &&
-  SEED_DEV_OK=1 FIXTURE_CATALOGUE_SEED=1 STORE_CONFIG_FILE="$STORE_CONFIG" npx prisma db seed &&
+  node_modules/.bin/prisma db push --force-reset --accept-data-loss &&
+  ts prisma/apply-fts-setup.ts &&
+  ts prisma/apply-notification-indexes.ts &&
+  ts prisma/apply-shipping-indexes.ts &&
+  SEED_SCOPE=notifications-rbac STORE_CONFIG_FILE="$STORE_CONFIG" SEED_SHIPPING_FLAT_RATE=5 ts prisma/seed.ts &&
+  SEED_DEV_OK=1 FIXTURE_CATALOGUE_SEED=1 STORE_CONFIG_FILE="$STORE_CONFIG" ts prisma/seed.ts &&
   node /usr/local/bin/scramble-seeded-logins.js &&
   ADMIN_EMAIL="$DEMO_ADMIN_EMAIL" ADMIN_PASSWORD="$DEMO_ADMIN_PASSWORD" \
     ADMIN_FIRST_NAME=Demo ADMIN_LAST_NAME=Admin ADMIN_LOCALE=en \
-    npx ts-node --transpile-only apps/api/scripts/create-admin.ts --from-env
+    ts apps/api/scripts/create-admin.ts --from-env
 )
 
 seconds_until_reset() {
