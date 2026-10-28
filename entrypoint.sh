@@ -22,8 +22,15 @@ export CORS_ORIGIN="${CORS_ORIGIN:-https://demo.themerchantengine.com,https://de
 export STOREFRONT_PUBLIC_BASE_URL="${STOREFRONT_PUBLIC_BASE_URL:-https://demo.themerchantengine.com}"
 export ADMIN_PUBLIC_BASE_URL="${ADMIN_PUBLIC_BASE_URL:-https://demo-admin.themerchantengine.com}"
 export API_PUBLIC_BASE_URL="$API_URL"
-export STORAGE_DRIVER=local UPLOADS_ROOT=uploads PRIVATE_UPLOADS_DIR=uploads-private
-export UPLOADS_BASE_URL="$API_URL/uploads"
+export UPLOADS_ROOT=uploads PRIVATE_UPLOADS_DIR=uploads-private
+# Neon object storage when its keys are set as Render secrets, local disk otherwise.
+if [ -n "${S3_ACCESS_KEY:-}" ] && [ -n "${S3_SECRET_KEY:-}" ]; then
+  export STORAGE_DRIVER=s3 S3_REGION="${S3_REGION:-us-east-2}" S3_BUCKET="${S3_BUCKET:-demo-assets}"
+  export S3_ENDPOINT="${S3_ENDPOINT:-https://br-lively-darkness-b5mes70m.storage.c-7.us-east-2.aws.neon.tech}"
+  export S3_PUBLIC_URL="${S3_PUBLIC_URL:-$S3_ENDPOINT/$S3_BUCKET}" S3_FORCE_PATH_STYLE=true
+else
+  export STORAGE_DRIVER=local UPLOADS_BASE_URL="$API_URL/uploads"
+fi
 export MAIL_TRANSPORT=console GSC_SUBMISSION_ENABLED=false
 # Visitors can register a customer account without an inbox.
 export AUTH_SKIP_EMAIL_VERIFICATION=1
@@ -34,7 +41,9 @@ DEMO_ADMIN_PASSWORD="${DEMO_ADMIN_PASSWORD:-demo-admin-2026}"
 
 redis-server --daemonize yes --bind 127.0.0.1 --port 6379 --save "" --appendonly no --dir /tmp
 
-reseed() {
+reseed() (
+  # Lowest CPU priority, so the placeholder answers the Render health check in time.
+  renice -n 19 -p $BASHPID >/dev/null
   echo "[demo] reseed start $(date -u +%FT%TZ)"
   rm -rf uploads/* uploads-private/*
   redis-cli -p 6379 FLUSHALL >/dev/null
@@ -48,7 +57,7 @@ reseed() {
   ADMIN_EMAIL="$DEMO_ADMIN_EMAIL" ADMIN_PASSWORD="$DEMO_ADMIN_PASSWORD" \
     ADMIN_FIRST_NAME=Demo ADMIN_LAST_NAME=Admin ADMIN_LOCALE=en \
     npx ts-node --transpile-only apps/api/scripts/create-admin.ts --from-env
-}
+)
 
 seconds_until_reset() {
   local now next
