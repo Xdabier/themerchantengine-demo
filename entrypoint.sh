@@ -32,6 +32,9 @@ else
   export STORAGE_DRIVER=local UPLOADS_BASE_URL="$API_URL/uploads"
 fi
 export MAIL_TRANSPORT=console GSC_SUBMISSION_ENABLED=false
+# Production refuses to boot without a mail identity. The console transport sends nothing.
+export RESEND_FROM_EMAIL=noreply@themerchantengine.com RESEND_FROM_NAME="The Merchant Engine Demo"
+export RESEND_REPLY_TO=noreply@themerchantengine.com CONTACT_FORM_RECIPIENT=noreply@themerchantengine.com
 # Visitors can register a customer account without an inbox.
 export AUTH_SKIP_EMAIL_VERIFICATION=1
 export TS_NODE_TRANSPILE_ONLY=true
@@ -89,6 +92,9 @@ while true; do
     code=$?
     [ "$code" -eq 124 ] && break
     echo "[demo] api exited $code, restart in 30s"
+    # Keep the port open, or Render restarts the container and the reseed runs again.
+    placeholder
     sleep 30
+    kill "$PLACEHOLDER_PID" && wait "$PLACEHOLDER_PID" 2>/dev/null
   done
 done
