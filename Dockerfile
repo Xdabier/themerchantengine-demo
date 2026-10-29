@@ -19,8 +19,8 @@ ENV PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1 \
     NPM_CONFIG_FETCH_RETRY_MAXTIMEOUT=120000
 
 WORKDIR /app
-# The ref's current sha. A new engine commit changes this file, so the clone below never comes from the cache.
-ADD https://api.github.com/repos/Xdabier/themerchantengine/git/refs/heads/$ENGINE_REF /tmp/engine-ref.json
+# The repo's ref list. A new engine commit changes this file, so the clone below never comes from the cache.
+ADD ${ENGINE_REPO}.git/info/refs?service=git-upload-pack /tmp/engine-refs
 RUN git clone --depth 1 --branch "$ENGINE_REF" "$ENGINE_REPO" . && rm -rf .git
 
 # Neon object storage answers 501 to object ACLs. The demo bucket is public, so drop them.
